@@ -1,0 +1,7 @@
+name: subname
+path: local/path
+submodules:
+  - url: https://github.com/org/subone
+    branch: main
+  - url: https://github.com/org/subtwo
+    branch: master

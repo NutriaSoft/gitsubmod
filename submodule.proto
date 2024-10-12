@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "./protos";
+
+package protos;
+
+message Submodule {
+    string url = 1;
+    string branch = 2;
+    string name = 3;
+}
+
+message SubmoduleList {
+    repeated Submodule submodules = 1;
+}
