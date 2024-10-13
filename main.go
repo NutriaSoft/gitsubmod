@@ -46,6 +46,7 @@ func initialModel() model {
 	submoduleList.SetShowStatusBar(false)
 	submoduleList.SetShowFilter(false)
 	submoduleList.SetShowHelp(false)
+	submoduleList.SetShowFilter(true)
 	submoduleList.Styles.Title = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
 
 	return model{
