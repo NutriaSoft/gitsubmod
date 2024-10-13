@@ -38,6 +38,13 @@ func AddSubmodule(newSubModule *pb.Submodule, submodules *pb.SubmoduleList) {
 		submodules = &pb.SubmoduleList{}
 	}
 
+	if submodules.Submodules != nil {
+		_, found := FindSubmodule(submodules, newSubModule.Name)
+		if found {
+			return
+		}
+	}
+
 	if submodules.Submodules == nil {
 		submodules.Submodules = make([]*pb.Submodule, 0)
 	}

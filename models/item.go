@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/list"
+	pb "submoduleop/protos"
 )
 
 type Item struct {
@@ -22,9 +23,9 @@ func (i Item) FilterValue() string {
 	return i.title
 }
 
-func ItemsFromSubmodules(submodules []Submodule) []list.Item {
-	items := make([]list.Item, len(submodules))
-	for i, sub := range submodules {
+func ItemsFromSubmodules(submodules *pb.SubmoduleList) []list.Item {
+	items := make([]list.Item, len(submodules.Submodules))
+	for i, sub := range submodules.Submodules {
 		items[i] = Item{
 			title: sub.Name,
 			desc:  fmt.Sprintf("Branch: %s\nURL: %s", sub.Branch, sub.Url),
