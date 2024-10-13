@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log"
 	"submoduleop/collector"
+	"submoduleop/commands"
 	"submoduleop/models"
+
+	pb "submoduleop/protos"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	pb "submoduleop/protos"
 )
 
 type screenState int
@@ -32,6 +34,8 @@ type model struct {
 	inputBranch string
 	inputName   string
 	cursor      int
+	err         error
+	submodules  *pb.SubmoduleList
 }
 
 func initialModel() model {
@@ -58,7 +62,7 @@ func initialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return commands.LoadSubmoduleFromFileCmd()
 }
 
 func (m model) renderInputView() string {
@@ -95,6 +99,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case commands.LoadSucessMsg:
+		m.submodules = msg.Submodules
+		m.list.SetItems(models.ItemsFromSubmodules(m.submodules))
+		m.err = nil
+		return m, nil
+	case commands.LoadErrMsg:
+		m.err = msg.Err
+		return m, nil
+	case commands.SaveErrMsg:
+		if msg.Err != nil {
+			m.err = msg.Err
+			return m, nil
+		}
+		m.err = nil
+		if m.screen == screenInput {
+			m.screen = screenList
+			m.inputURL = ""
+			m.inputBranch = ""
+			m.inputName = ""
+		}
+		m.list.SetItems(models.ItemsFromSubmodules(m.submodules))
+		return m, nil
 	case tea.WindowSizeMsg:
 		h, v := appStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
@@ -109,16 +135,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 
 			case "delete":
-				submodules, err := collector.LoadSubmodulesFromFile()
-				if err != nil {
-					log.Println(err)
-				}
-				if len(submodules.Submodules) > 0 {
+				if len(m.submodules.Submodules) > 0 {
 					index := m.list.Index()
-					name := submodules.Submodules[index].Name
-					collector.DeleteSubmodule(submodules, name)
-					collector.SaveSubmodulesToFile(submodules)
-					m.list.SetItems(models.ItemsFromSubmodules(submodules))
+					name := m.submodules.Submodules[index].Name
+					collector.DeleteSubmodule(m.submodules, name)
+					return m, commands.SaveSubmodulesCmd(m.submodules)
 				}
 				return m, nil
 
@@ -130,22 +151,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.screen == screenInput {
 			switch msg.String() {
 			case "enter":
-				submodules, err := collector.LoadSubmodulesFromFile()
-				if err != nil {
-					log.Println(err)
-				}
 				newModule := &pb.Submodule{
 					Url:    m.inputURL,
 					Branch: m.inputBranch,
 					Name:   m.inputName,
 				}
-				collector.AddSubmodule(newModule, submodules)
-				collector.SaveSubmodulesToFile(submodules)
-				m.list.SetItems(models.ItemsFromSubmodules(submodules))
-				m.screen = screenList
-				m.inputURL = ""
-				m.inputBranch = ""
-				m.inputName = ""
+				collector.AddSubmodule(newModule, m.submodules)
+				return m, commands.SaveSubmodulesCmd(m.submodules)
 
 			case "up", "down":
 				if msg.String() == "up" && m.cursor > 0 {
