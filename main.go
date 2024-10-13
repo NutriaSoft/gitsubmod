@@ -39,15 +39,9 @@ type model struct {
 }
 
 func initialModel() model {
-	submodules, err := collector.LoadSubmodulesFromFile()
-	if err != nil {
-		// TODO: Handle error
-		log.Println(err)
-	}
-	itemList := models.ItemsFromSubmodules(submodules)
 	delegate := list.NewDefaultDelegate()
 
-	submoduleList := list.New(itemList, delegate, 20, 10)
+	submoduleList := list.New([]list.Item{}, delegate, 20, 10)
 	submoduleList.Title = "Submodules"
 	submoduleList.SetShowStatusBar(false)
 	submoduleList.SetShowFilter(false)
