@@ -3,12 +3,16 @@ package models
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/list"
 	pb "submoduleop/protos"
+
+	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/lipgloss"
 )
 
+var descriptionStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("250"))
+
 type Item struct {
-	title, desc string
+	title, branch, path, url string
 }
 
 func (i Item) Title() string {
@@ -16,7 +20,8 @@ func (i Item) Title() string {
 }
 
 func (i Item) Description() string {
-	return i.desc
+	desc := fmt.Sprintf("Branch: %s\nPath: %s\nURL: %s", i.branch, i.path, i.url)
+	return descriptionStyle.Render(desc)
 }
 
 func (i Item) FilterValue() string {
@@ -27,8 +32,10 @@ func ItemsFromSubmodules(submodules *pb.SubmoduleList) []list.Item {
 	items := make([]list.Item, len(submodules.Submodules))
 	for i, sub := range submodules.Submodules {
 		items[i] = Item{
-			title: sub.Name,
-			desc:  fmt.Sprintf("Branch: %s\nURL: %s", sub.Branch, sub.Url),
+			title:  sub.Name,
+			branch: sub.Branch,
+			url:    sub.Url,
+			path:   sub.Path,
 		}
 	}
 	return items

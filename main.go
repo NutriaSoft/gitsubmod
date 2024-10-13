@@ -33,6 +33,7 @@ type model struct {
 	inputURL    string
 	inputBranch string
 	inputName   string
+	inputPath   string
 	cursor      int
 	err         error
 	submodules  *pb.SubmoduleList
@@ -40,11 +41,11 @@ type model struct {
 
 func initialModel() model {
 	delegate := list.NewDefaultDelegate()
+	delegate.SetHeight(4)
 
 	submoduleList := list.New([]list.Item{}, delegate, 20, 10)
 	submoduleList.Title = "Submodules"
-	submoduleList.SetShowStatusBar(false)
-	submoduleList.SetShowFilter(false)
+	submoduleList.SetShowStatusBar(true)
 	submoduleList.SetShowHelp(false)
 	submoduleList.SetShowFilter(true)
 	submoduleList.Styles.Title = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
@@ -61,10 +62,11 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) renderInputView() string {
-	var urlField, branchField, nameField string
+	var urlField, branchField, nameField, pathField string
 	urlField = "URL: " + m.inputURL
 	branchField = "Branch: " + m.inputBranch
 	nameField = "Name: " + m.inputName
+	pathField = "Path: " + m.inputPath
 
 	if m.cursor == 0 {
 		urlField = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205")).Render(urlField)
@@ -75,10 +77,13 @@ func (m model) renderInputView() string {
 	if m.cursor == 2 {
 		nameField = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205")).Render(nameField)
 	}
+	if m.cursor == 3 {
+		pathField = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205")).Render(pathField)
+	}
 
 	return fmt.Sprintf(
-		"Add a new submodule:\n\n%s\n%s\n%s\n\nPress Enter to save or 'q' to cancel.",
-		urlField, branchField, nameField,
+		"Add a new submodule:\n\n%s\n%s\n%s\n%s\n\nPress Enter to save or 'q' to cancel.",
+		urlField, branchField, nameField, pathField,
 	)
 }
 
@@ -113,6 +118,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inputURL = ""
 			m.inputBranch = ""
 			m.inputName = ""
+			m.inputPath = ""
 		}
 		m.list.SetItems(models.ItemsFromSubmodules(m.submodules))
 		return m, nil
@@ -125,7 +131,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q", "ctrl+c":
 				return m, tea.Quit
 
-			case "a":
+			case "ctrl+a":
 				m.screen = screenInput
 				return m, nil
 
@@ -145,11 +151,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.screen == screenInput {
 			switch msg.String() {
+			case "ctrl+c":
+				m.screen = screenList
+				return m, nil
 			case "enter":
 				newModule := &pb.Submodule{
 					Url:    m.inputURL,
 					Branch: m.inputBranch,
 					Name:   m.inputName,
+					Path:   m.inputPath,
 				}
 				collector.AddSubmodule(newModule, m.submodules)
 				return m, commands.SaveSubmodulesCmd(m.submodules)
@@ -157,7 +167,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "up", "down":
 				if msg.String() == "up" && m.cursor > 0 {
 					m.cursor--
-				} else if msg.String() == "down" && m.cursor < 2 {
+				} else if msg.String() == "down" && m.cursor < 3 {
 					m.cursor++
 				}
 
@@ -168,6 +178,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.inputBranch = m.inputBranch[:len(m.inputBranch)-1]
 				} else if m.cursor == 2 && len(m.inputName) > 0 {
 					m.inputName = m.inputName[:len(m.inputName)-1]
+				} else if m.cursor == 3 && len(m.inputPath) > 0 {
+					m.inputPath = m.inputPath[:len(m.inputPath)-1]
 				}
 
 			default:
@@ -179,6 +191,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.inputBranch += msg.String()
 					case 2: // Name input
 						m.inputName += msg.String()
+					case 3: // Path input
+						m.inputPath += msg.String()
 					}
 				}
 			}
